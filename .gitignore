@@ -5,6 +5,7 @@ program
 # Logs
 *.log
 wal.log
+input.txt
 output.txt
 
 # Submission
