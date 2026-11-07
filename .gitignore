@@ -5,6 +5,7 @@ program
 # Logs
 *.log
 wal.log
+output.txt
 
 # Submission
 solution.tar.gz
