@@ -36,8 +36,9 @@ void server_start(server_t *self)
     /* TODO: Adicionar código aqui se necessário! */
 
     /* Cria a thread de log e a thread de snapshot. */
-    pthread_create(&self->log_writer, NULL, wal_writer_run, (void *) self->wal);
-    pthread_create(&self->snapshot.thread, NULL, snapshot_run, (void *) &self->snapshot);
+    pthread_create(&self->log_writer, NULL, wal_writer_run, (void *)self->wal);
+    pthread_create(&self->snapshot.thread, NULL, snapshot_run,
+                   (void *)&self->snapshot);
 
     plog("[server] Started\n");
 }
@@ -47,12 +48,13 @@ void server_spawn_client(server_t *self)
     unsigned int id = self->n_clients;
 
     /* Inicializa o cliente. */
-    client_init(&self->clients[id], self->db, id, (unsigned int) rand());
+    client_init(&self->clients[id], self->db, id, (unsigned int)rand());
 
     /* TODO: Adicionar código aqui se necessário! */
 
     /* Cria a thread cliente. */
-    pthread_create(&self->clients[id].thread, NULL, client_run, (void *) &self->clients[id]);
+    pthread_create(&self->clients[id].thread, NULL, client_run,
+                   (void *)&self->clients[id]);
     self->n_clients++;
 
     plog("[server] Client %u created!\n", id);
