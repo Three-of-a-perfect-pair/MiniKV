@@ -4,7 +4,7 @@ set -e
 
 echo "Configuring MiniKV development environment..."
 
-git config core.hooksPath .githooks
+git config --local core.hooksPath .githooks
 
 chmod +x .githooks/*
 
