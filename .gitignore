@@ -1,0 +1,18 @@
+# Build
+obj/
+program
+
+# Logs
+*.log
+wal.log
+
+# Submission
+solution.tar.gz
+
+# Editor
+*.swp
+*.swo
+*~
+
+# Compilation database
+compile_commands.json

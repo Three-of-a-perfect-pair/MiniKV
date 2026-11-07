@@ -41,7 +41,7 @@ OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 HDR = $(wildcard include/*.h)
 FORMAT_SRC = $(wildcard src/*.c include/*.h)
 
-.PHONY: all clean submission format format-check
+.PHONY: all clean submission format format-check pre-commit
 
 all: $(EXEC)
 
@@ -66,3 +66,13 @@ format:
 
 format-check:
 	$(FORMAT) --dry-run --Werror $(FORMAT_SRC)
+
+pre-commit:
+	@echo "[CHECK] Verificando formatação..."
+	@if ! $(FORMAT) --dry-run --Werror $(FORMAT_SRC) 2>/dev/null; then \
+		echo "[FORMAT] Corrigindo formatação..."; \
+		$(FORMAT) -i $(FORMAT_SRC) || exit 1; \
+	fi
+	@echo "[BUILD] Compilando projeto..."
+	@$(MAKE) $(EXEC)
+	@echo "[OK] Todas as verificações passaram!"
