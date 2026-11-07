@@ -10,6 +10,9 @@
 # Depois de mudar RELEASE ou ADDONS, rode "make clean" antes de compilar.
 #===============================================================================
 
+# Ferramenta para formatação
+FORMAT = clang-format
+
 # Versão final (true) ou de debug (false)?
 RELEASE ?= true
 
@@ -26,6 +29,7 @@ CFLAGS  += -Wall -Werror -std=c11 -pthread -D_POSIX_C_SOURCE=200809L -Iinclude $
 LDFLAGS += $(ADDONS)
 LIBS    += -lm -lpthread
 
+
 ifeq ($(RELEASE), true)
 	CFLAGS += -DNDEBUG
 else
@@ -35,8 +39,9 @@ endif
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 HDR = $(wildcard include/*.h)
+FORMAT_SRC = $(wildcard src/*.c include/*.h)
 
-.PHONY: all clean submission
+.PHONY: all clean submission format format-check
 
 all: $(EXEC)
 
@@ -55,3 +60,9 @@ clean:
 submission: clean
 	@tmp=$$(mktemp) && tar -czf $$tmp . && mv $$tmp solution.tar.gz
 	@echo "solution.tar.gz criado."
+
+format:
+	$(FORMAT) -i $(FORMAT_SRC)
+
+format-check:
+	$(FORMAT) --dry-run --Werror $(FORMAT_SRC)

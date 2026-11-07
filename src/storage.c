@@ -24,7 +24,7 @@ static void race_window(void)
     static _Thread_local unsigned int state = 0;
 
     if (state == 0)
-        state = (unsigned int) (uintptr_t) &state | 1;
+        state = (unsigned int)(uintptr_t)&state | 1;
     state = state * 1103515245u + 12345u;
     if (((state >> 16) & 7) == 0)
         sched_yield();
@@ -34,7 +34,7 @@ unsigned long table_hash(const char *key)
 {
     unsigned long hash = 14695981039346656037ul;
     for (; *key; key++) {
-        hash ^= (unsigned char) *key;
+        hash ^= (unsigned char)*key;
         hash *= 1099511628211ul;
     }
     return hash;
@@ -163,7 +163,8 @@ void disk_write_batch(disk_t *self, const log_record_t *records, unsigned int n)
 
     self->batches++;
     self->records += n;
-    plog("[disk] Batch of %u records written (last LSN %ld)\n", n, self->last_lsn);
+    plog("[disk] Batch of %u records written (last LSN %ld)\n", n,
+         self->last_lsn);
 
     atomic_store(&self->durable_lsn, self->last_lsn);
     atomic_store(&self->writing, 0);

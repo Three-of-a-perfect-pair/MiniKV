@@ -20,7 +20,7 @@
 config_t parse(int argc, char **argv)
 {
     int c;
-    config_t config = { 16, 500, 64, 8, 8, 5, 50 };
+    config_t config = {16, 500, 64, 8, 8, 5, 50};
 
     while ((c = getopt(argc, argv, "c:n:a:s:b:f:p:h")) != -1) {
         switch (c) {
