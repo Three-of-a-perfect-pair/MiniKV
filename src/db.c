@@ -8,6 +8,7 @@
  * VOCÊ DEVE ALTERAR ESTE ARQUIVO.
  */
 
+#include <semaphore.h>
 #include <stdlib.h>
 #include "db.h"
 
@@ -22,14 +23,28 @@ void db_init(db_t *self, wal_t *wal)
         table_insert(&self->table, key, INITIAL_BALANCE);
     }
 
-    /* TODO: Adicionar código aqui se necessário! */
+    self->partition_locks = malloc(config.partitions * sizeof(sem_t));
+    self->writer_lock = malloc(config.partitions * sizeof(pthread_mutex_t));
+    self->readers = calloc(config.partitions, sizeof(int));
+
+    for (unsigned int i = 0; i < config.partitions; i++) {
+        sem_init(&self->partition_locks[i], 0, 1);
+        pthread_mutex_init(&self->writer_lock[i], NULL);
+    }
 
     plog("[db] Initialized\n");
 }
 
 void db_finalize(db_t *self)
 {
-    /* TODO: Adicionar código aqui se necessário! */
+    for (unsigned int i = 0; i < config.partitions; i++) {
+        sem_destroy(&self->partition_locks[i]);
+        pthread_mutex_destroy(&self->writer_lock[i]);
+    }
+
+    free(self->partition_locks);
+    free(self->writer_lock);
+    free(self->readers);
 
     table_finalize(&self->table);
     plog("[db] Finalized\n");
@@ -37,22 +52,49 @@ void db_finalize(db_t *self)
 
 void db_acquire_read(db_t *self, const char *key)
 {
-    /* TODO: Implementar! */
+    unsigned int partition = db_partition_of(self, key);
+
+    pthread_mutex_lock(&self->writer_lock[partition]);
+    if (++self->readers[partition] == 1) {
+        sem_wait(&self->partition_locks[partition]);
+    }
+    pthread_mutex_unlock(&self->writer_lock[partition]);
 }
 
 void db_release_read(db_t *self, const char *key)
 {
-    /* TODO: Implementar! */
+    unsigned int partition = db_partition_of(self, key);
+
+    pthread_mutex_lock(&self->writer_lock[partition]);
+    if (--self->readers[partition] == 0) {
+        sem_post(&self->partition_locks[partition]);
+    }
+    pthread_mutex_unlock(&self->writer_lock[partition]);
 }
 
 void db_acquire_pair(db_t *self, const char *from, const char *to)
 {
-    /* TODO: Implementar! */
+    unsigned int partition_from = db_partition_of(self, from);
+    unsigned int partition_to = db_partition_of(self, to);
+    if (partition_from == partition_to) {
+        sem_wait(&self->partition_locks[partition_from]);
+    } else if (partition_from < partition_to) {
+        sem_wait(&self->partition_locks[partition_from]);
+        sem_wait(&self->partition_locks[partition_to]);
+    } else {
+        sem_wait(&self->partition_locks[partition_to]);
+        sem_wait(&self->partition_locks[partition_from]);
+    }
 }
 
 void db_release_pair(db_t *self, const char *from, const char *to)
 {
-    /* TODO: Implementar! */
+    unsigned int partition_from = db_partition_of(self, from);
+    unsigned int partition_to = db_partition_of(self, to);
+    sem_post(&self->partition_locks[partition_from]);
+    if (partition_from != partition_to) {
+        sem_post(&self->partition_locks[partition_to]);
+    }
 }
 
 void db_snapshot_begin(db_t *self)
