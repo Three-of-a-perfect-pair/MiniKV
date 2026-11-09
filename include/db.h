@@ -22,6 +22,10 @@ typedef struct db {
     /* TODO: Adicione aqui os atributos que achar necessários para implementar o
     comportamento do banco. Esses atributos deverão ser usados pelas funções
     do banco. */
+
+    sem_t *partition_locks;
+    pthread_mutex_t *writer_lock;
+    int *readers;
 } db_t;
 
 /*============================================================================*
