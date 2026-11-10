@@ -99,12 +99,16 @@ void db_release_pair(db_t *self, const char *from, const char *to)
 
 void db_snapshot_begin(db_t *self)
 {
-    /* TODO: Implementar! */
+    // Precisa travar todas as transferências
+    for (int i = 0; i < config.partitions; i++)
+        sem_wait(&self->partition_locks[i]);
 }
 
 void db_snapshot_end(db_t *self)
 {
     /* TODO: Implementar! */
+    for (int i = 0; i < config.partitions; i++)
+        sem_post(&self->partition_locks[i]);
 }
 
 /* --------------------------------------------------------- */
