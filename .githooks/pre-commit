@@ -6,18 +6,18 @@ echo "======================================"
 echo " MiniKV - Pre-commit checks"
 echo "======================================"
 
-# Verifica whitespace nos arquivos staged.
 echo "[CHECK] Git whitespace..."
-git diff --cached --check || exit 1
+git diff --cached --check
 
-# Verifica formatação.
 echo "[CHECK] Code formatting..."
-make format-check || exit 1
+make format-check
 
-# Verifica compilação.
 echo "[CHECK] Compilation..."
 make clean
-make || exit 1
+make
+
+echo "[CHECK] Memory check..."
+make memcheck
 
 echo "======================================"
 echo " All checks passed!"

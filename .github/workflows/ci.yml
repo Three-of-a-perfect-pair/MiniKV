@@ -3,11 +3,9 @@ on:
   push:
     branches:
       - main
-      - wip
   pull_request:
     branches:
       - main
-      - wip
 
 jobs:
   build:
@@ -23,7 +21,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
           build-essential \
-          clang-format
+          clang-format \
+          valgrind
 
       - name: Check formatting
         run: make format-check
@@ -33,3 +32,6 @@ jobs:
 
       - name: Compile
         run: make
+
+      - name: Memory leak check
+        run: make memcheck

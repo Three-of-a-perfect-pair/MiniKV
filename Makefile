@@ -41,7 +41,7 @@ OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 HDR = $(wildcard include/*.h)
 FORMAT_SRC = $(wildcard src/*.c include/*.h)
 
-.PHONY: all clean submission format format-check
+.PHONY: all clean submission format format-check memcheck
 
 all: $(EXEC)
 
@@ -66,3 +66,8 @@ format:
 
 format-check:
 	$(FORMAT) --dry-run --Werror $(FORMAT_SRC)
+
+memcheck:
+	$(MAKE) clean
+	$(MAKE) RELEASE=false
+	./scripts/memory-check.sh

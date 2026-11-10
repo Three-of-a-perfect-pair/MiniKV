@@ -1,34 +1,14 @@
 # MiniKV
 
-a key value transactional bank
+A concurrent key-value transactional bank.
 
-Project from concurrent programming class
+Project developed for the Concurrent Programming course.
 
-## Degree project
+The definitions are in [ENUNCIADO](./ENUNCIADO.pdf)
 
-A concurrent programming subject.
+## Files to Modify
 
-## Modifiable files
-
-### db.h, server.h and wal.h
-
-Add attributes to structs and new function signatures where indicated.
-
-### db.c, server.c and wal.c
-
-Implement the required functions.
-
-## TODO list
-
-### from db.c
-
-Implement all the 8 synchronization functions (db_acquire_*, db_release_*,
-db_snapshot_begin/end).
-
-### from server.c
-
-Implement server_shutdown and complete the remaining functions if necessary.
-
-### from wal.c
-
-Implement all the functions of this file.
+- `db.h`, `db.c`
+- `server.h`, `server.c`
+- `wal.h`, `wal.c`
+We had a base file for this project from the professors
