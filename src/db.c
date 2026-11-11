@@ -8,7 +8,9 @@
  * VOCÊ DEVE ALTERAR ESTE ARQUIVO.
  */
 
-#include <semaphore.h>
+#define _GNU_SOURCE
+
+#include <pthread.h>
 #include <stdlib.h>
 #include "db.h"
 
@@ -23,14 +25,16 @@ void db_init(db_t *self, wal_t *wal)
         table_insert(&self->table, key, INITIAL_BALANCE);
     }
 
-    self->partition_locks = malloc(config.partitions * sizeof(sem_t));
-    self->writer_lock = malloc(config.partitions * sizeof(pthread_mutex_t));
-    self->readers = calloc(config.partitions, sizeof(int));
+    self->rw_locks = malloc(config.partitions * sizeof(pthread_rwlock_t));
 
+    pthread_rwlockattr_t attr;
+    pthread_rwlockattr_init(&attr);
+    pthread_rwlockattr_setkind_np(&attr,
+                                  PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
     for (unsigned int i = 0; i < config.partitions; i++) {
-        sem_init(&self->partition_locks[i], 0, 1);
-        pthread_mutex_init(&self->writer_lock[i], NULL);
+        pthread_rwlock_init(&self->rw_locks[i], &attr);
     }
+    pthread_rwlockattr_destroy(&attr);
 
     plog("[db] Initialized\n");
 }
@@ -38,13 +42,10 @@ void db_init(db_t *self, wal_t *wal)
 void db_finalize(db_t *self)
 {
     for (unsigned int i = 0; i < config.partitions; i++) {
-        sem_destroy(&self->partition_locks[i]);
-        pthread_mutex_destroy(&self->writer_lock[i]);
+        pthread_rwlock_destroy(&self->rw_locks[i]);
     }
 
-    free(self->partition_locks);
-    free(self->writer_lock);
-    free(self->readers);
+    free(self->rw_locks);
 
     table_finalize(&self->table);
     plog("[db] Finalized\n");
@@ -52,24 +53,12 @@ void db_finalize(db_t *self)
 
 void db_acquire_read(db_t *self, const char *key)
 {
-    unsigned int partition = db_partition_of(self, key);
-
-    pthread_mutex_lock(&self->writer_lock[partition]);
-    if (++self->readers[partition] == 1) {
-        sem_wait(&self->partition_locks[partition]);
-    }
-    pthread_mutex_unlock(&self->writer_lock[partition]);
+    pthread_rwlock_rdlock(&self->rw_locks[db_partition_of(self, key)]);
 }
 
 void db_release_read(db_t *self, const char *key)
 {
-    unsigned int partition = db_partition_of(self, key);
-
-    pthread_mutex_lock(&self->writer_lock[partition]);
-    if (--self->readers[partition] == 0) {
-        sem_post(&self->partition_locks[partition]);
-    }
-    pthread_mutex_unlock(&self->writer_lock[partition]);
+    pthread_rwlock_unlock(&self->rw_locks[db_partition_of(self, key)]);
 }
 
 void db_acquire_pair(db_t *self, const char *from, const char *to)
@@ -77,13 +66,13 @@ void db_acquire_pair(db_t *self, const char *from, const char *to)
     unsigned int partition_from = db_partition_of(self, from);
     unsigned int partition_to = db_partition_of(self, to);
     if (partition_from == partition_to) {
-        sem_wait(&self->partition_locks[partition_from]);
+        pthread_rwlock_wrlock(&self->rw_locks[partition_from]);
     } else if (partition_from < partition_to) {
-        sem_wait(&self->partition_locks[partition_from]);
-        sem_wait(&self->partition_locks[partition_to]);
+        pthread_rwlock_wrlock(&self->rw_locks[partition_from]);
+        pthread_rwlock_wrlock(&self->rw_locks[partition_to]);
     } else {
-        sem_wait(&self->partition_locks[partition_to]);
-        sem_wait(&self->partition_locks[partition_from]);
+        pthread_rwlock_wrlock(&self->rw_locks[partition_to]);
+        pthread_rwlock_wrlock(&self->rw_locks[partition_from]);
     }
 }
 
@@ -91,25 +80,15 @@ void db_release_pair(db_t *self, const char *from, const char *to)
 {
     unsigned int partition_from = db_partition_of(self, from);
     unsigned int partition_to = db_partition_of(self, to);
-    sem_post(&self->partition_locks[partition_from]);
+    pthread_rwlock_unlock(&self->rw_locks[partition_from]);
     if (partition_from != partition_to) {
-        sem_post(&self->partition_locks[partition_to]);
+        pthread_rwlock_unlock(&self->rw_locks[partition_to]);
     }
 }
 
-void db_snapshot_begin(db_t *self)
-{
-    // Precisa travar todas as transferências
-    for (int i = 0; i < config.partitions; i++)
-        sem_wait(&self->partition_locks[i]);
-}
+void db_snapshot_begin(db_t *self) {}
 
-void db_snapshot_end(db_t *self)
-{
-    /* TODO: Implementar! */
-    for (int i = 0; i < config.partitions; i++)
-        sem_post(&self->partition_locks[i]);
-}
+void db_snapshot_end(db_t *self) {}
 
 /* --------------------------------------------------------- */
 /* ATENÇÃO: Não será necessário modificar as funções abaixo! */
