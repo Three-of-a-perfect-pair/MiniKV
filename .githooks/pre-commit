@@ -10,7 +10,7 @@ echo "[CHECK] Git whitespace..."
 git diff --cached --check
 
 echo "[CHECK] Code formatting..."
-make format-check
+make format
 
 echo "[CHECK] Compilation..."
 make clean
