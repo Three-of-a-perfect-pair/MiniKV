@@ -86,9 +86,19 @@ void db_release_pair(db_t *self, const char *from, const char *to)
     }
 }
 
-void db_snapshot_begin(db_t *self) {}
+void db_snapshot_begin(db_t *self)
+{
+    for (int i = 0; i < config.partitions; i++) {
+        pthread_rwlock_wrlock(&self->rw_locks[i]);
+    }
+}
 
-void db_snapshot_end(db_t *self) {}
+void db_snapshot_end(db_t *self)
+{
+    for (int i = 0; i < config.partitions; i++) {
+        pthread_rwlock_unlock(&self->rw_locks[i]);
+    }
+}
 
 /* --------------------------------------------------------- */
 /* ATENÇÃO: Não será necessário modificar as funções abaixo! */
