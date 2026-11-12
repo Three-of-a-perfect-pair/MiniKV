@@ -6,13 +6,18 @@
  * VOCÊ DEVE ALTERAR ESTE ARQUIVO.
  */
 
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdlib.h>
 #include <string.h>
 #include "wal.h"
+#include "config.h"
+#include "storage.h"
 
 void wal_init(wal_t *self, disk_t *disk)
 {
     self->disk = disk;
+    sem_init(&self->sem, 0, config.buffer_size);  
 
     /* TODO: Adicionar código aqui se necessário! */
 
@@ -21,6 +26,7 @@ void wal_init(wal_t *self, disk_t *disk)
 
 void wal_finalize(wal_t *self)
 {
+    disk_finalize(self->disk);
     /* TODO: Adicionar código aqui se necessário! */
 
     plog("[wal] Finalized\n");
@@ -28,8 +34,19 @@ void wal_finalize(wal_t *self)
 
 long wal_append(wal_t *self, const char *from, const char *to, int amount)
 {
+    sem_wait(&self->sem);
+    log_record_t *record = malloc(sizeof(log_record_t));
+    record->amount = amount;
+    strcpy(record->from, from);
+    strcpy(record->to, to);
+    self->disk->durable_lsn++;
+    record->lsn = disk_durable_lsn(self->disk);
+    //onde que grava esse record???
+    
+
     /* TODO: Implementar! O código abaixo deve ser modificado! */
-    return 0;
+    
+    return record->lsn;
 }
 
 void wal_wait_durable(wal_t *self, long lsn)
