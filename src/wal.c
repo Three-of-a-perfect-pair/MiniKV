@@ -27,6 +27,7 @@ void wal_init(wal_t *self, disk_t *disk)
     self->tail = 0;
     self->count = 0;
     self->next_lsn = 0;
+    atomic_init(&self->finalize, 0);
 
     /* TODO: Adicionar código aqui se necessário! */
 
@@ -35,7 +36,6 @@ void wal_init(wal_t *self, disk_t *disk)
 
 void wal_finalize(wal_t *self)
 {
-    disk_finalize(self->disk);
     pthread_mutex_destroy(&self->mtx);
     pthread_cond_destroy(&self->not_empty);
     pthread_cond_destroy(&self->space_available);
@@ -88,10 +88,16 @@ void *wal_writer_run(void *arg)
 
     plog("[wal] Log writer is now running!\n");
 
-    while (1) {
+    while (!atomic_load(&self->finalize)) {
         pthread_mutex_lock(&self->mtx);
-        while (self->count == 0)
+
+        while (self->count == 0 && !atomic_load(&self->finalize))
             pthread_cond_wait(&self->not_empty, &self->mtx);
+
+        if (atomic_load(&self->finalize) && self->count == 0) {
+            pthread_mutex_unlock(&self->mtx);
+            break;
+        }
 
         unsigned int batch_size = self->count;
         log_record_t local_batch[batch_size]; // escreve nesse local
