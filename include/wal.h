@@ -8,6 +8,7 @@
 #ifndef __WAL_H__
 #define __WAL_H__
 
+#include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include "storage.h"
@@ -17,6 +18,19 @@
  */
 typedef struct wal {
     disk_t *disk; /* Referência para o disco. */
+    sem_t sem;
+    pthread_mutex_t mtx;
+
+    pthread_cond_t not_empty;
+    pthread_cond_t space_available;
+    pthread_cond_t durable_changed;
+    log_record_t *buffer;
+
+    unsigned int head;
+    unsigned int tail;
+    unsigned int count;
+
+    long next_lsn;
 
     /* TODO: Adicione aqui os atributos que achar necessários para implementar o
     comportamento do log. Esses atributos deverão ser usados pelas funções
