@@ -8,7 +8,6 @@
 #ifndef __WAL_H__
 #define __WAL_H__
 
-#include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include "storage.h"
