@@ -17,10 +17,16 @@
 void wal_init(wal_t *self, disk_t *disk)
 {
     self->disk = disk;
-    sem_init(&self->sem, 0, config.buffer_size);  
+    pthread_cond_init(&self->not_empty, NULL);
+    pthread_cond_init(&self->space_available, NULL);
+    pthread_cond_init(&self->durable_changed, NULL);
+
     pthread_mutex_init(&self->mtx, NULL);
-    self->buffer = malloc(sizeof(log_record_t)*config.buffer_size);
-    pthread_mutex_init(&self->estagiario, NULL);
+    self->buffer = malloc(config.buffer_size * sizeof(log_record_t));
+    self->head = 0;
+    self->tail = 0;
+    self->count = 0;
+    self->next_lsn = 0;
 
     /* TODO: Adicionar código aqui se necessário! */
 
@@ -30,10 +36,11 @@ void wal_init(wal_t *self, disk_t *disk)
 void wal_finalize(wal_t *self)
 {
     disk_finalize(self->disk);
-    sem_destroy(&self->sem);
     pthread_mutex_destroy(&self->mtx);
+    pthread_cond_destroy(&self->not_empty);
+    pthread_cond_destroy(&self->space_available);
+    pthread_cond_destroy(&self->durable_changed);
     free(self->buffer);
-    pthread_mutex_destroy(&self->estagiario);
     /* TODO: Adicionar código aqui se necessário! */
 
     plog("[wal] Finalized\n");
@@ -41,30 +48,38 @@ void wal_finalize(wal_t *self)
 
 long wal_append(wal_t *self, const char *from, const char *to, int amount)
 {
-    sem_wait(&self->sem); // limita a escrita no buffer 
     // cria log para inserir no buffer
+    pthread_mutex_lock(&self->mtx);
+
+    while (self->count == config.buffer_size)
+        pthread_cond_wait(&self->space_available, &self->mtx);
+
     log_record_t record;
     record.amount = amount;
     strcpy(record.from, from);
     strcpy(record.to, to);
-    pthread_mutex_lock(&self->estagiario);
-    self->disk->last_lsn++;
-    pthread_mutex_unlock(&self->estagiario);
-    record.lsn = disk_durable_lsn(self->disk);
-    
-    self->buffer[record.lsn%config.buffer_size] = record;
+    record.lsn = self->next_lsn++;
+
+    self->buffer[self->tail] = record;
+    self->tail = (self->tail + 1) % config.buffer_size;
+    self->count++;
+    pthread_cond_signal(&self->not_empty);
+    pthread_mutex_unlock(&self->mtx);
 
     /* TODO: Implementar! O código abaixo deve ser modificado! */
-    
+
     return record.lsn;
 }
 
 void wal_wait_durable(wal_t *self, long lsn)
 {
     /* TODO: Implementar! */
-    if (disk_durable_lsn(self->disk) < lsn){
-        pthread_mutex_lock(&self->mtx);
-    }
+    pthread_mutex_lock(&self->mtx);
+
+    while (disk_durable_lsn(self->disk) < lsn)
+        pthread_cond_wait(&self->durable_changed, &self->mtx);
+
+    pthread_mutex_unlock(&self->mtx);
 }
 
 void *wal_writer_run(void *arg)
@@ -73,15 +88,34 @@ void *wal_writer_run(void *arg)
 
     plog("[wal] Log writer is now running!\n");
 
-    /* TODO: Implementar! Enquanto o log não for encerrado, retire todos os
-       registros disponíveis no buffer e grave-os com disk_write_batch(). */
-    disk_write_batch(self->disk, self->buffer, config.buffer_size);
-    for (int i = 0; i < config.buffer_size; i++){
-        sem_post(&self->sem);
+    while (1) {
+        pthread_mutex_lock(&self->mtx);
+        while (self->count == 0)
+            pthread_cond_wait(&self->not_empty, &self->mtx);
+
+        unsigned int batch_size = self->count;
+        log_record_t local_batch[batch_size]; // escreve nesse local
+                                              // enquanto tiver disponível.
+                                              // Evita data race com o buffer
+        for (int i = 0; i < batch_size; i++) {
+            local_batch[i] = self->buffer[self->head];
+            self->head = (self->head + 1) % config.buffer_size;
+        }
+        self->count = 0;
+
+        pthread_cond_broadcast(&self->space_available);
+        pthread_mutex_unlock(&self->mtx);
+
+        /* TODO: Implementar! Enquanto o log não for encerrado, retire todos os
+           registros disponíveis no buffer e grave-os com disk_write_batch(). */
+        disk_write_batch(self->disk, local_batch, batch_size);
+
+        pthread_mutex_lock(&self->mtx);
+        pthread_cond_broadcast(&self->durable_changed);
+        pthread_mutex_unlock(&self->mtx);
     }
     (void)self;
 
-    pthread_mutex_unlock(&self->mtx);
     plog("[wal] Log writer has finished!\n");
     return NULL;
 }
