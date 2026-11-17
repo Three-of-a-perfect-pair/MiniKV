@@ -48,12 +48,12 @@ void wal_finalize(wal_t *self)
 
 long wal_append(wal_t *self, const char *from, const char *to, int amount)
 {
-    // cria log para inserir no buffer
     pthread_mutex_lock(&self->mtx);
 
     while (self->count == config.buffer_size)
         pthread_cond_wait(&self->space_available, &self->mtx);
 
+    // cria log para inserir no buffer
     log_record_t record;
     record.amount = amount;
     strcpy(record.from, from);
