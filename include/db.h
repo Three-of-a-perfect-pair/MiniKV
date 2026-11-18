@@ -23,7 +23,22 @@ typedef struct db {
     comportamento do banco. Esses atributos deverão ser usados pelas funções
     do banco. */
 
-    pthread_rwlock_t *rw_locks;
+    pthread_mutex_t *mutex;
+
+    pthread_cond_t *readers_cv;
+    pthread_cond_t *writers_cv;
+    pthread_cond_t *snapshots_cv;
+
+    int *readers;
+    int *writers;
+    int *snapshots;
+
+    int *curr_ticket;
+    int *next_ticket;
+
+    int *waiting_writers;
+    int *waiting_snapshots;
+
 } db_t;
 
 /*============================================================================*
