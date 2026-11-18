@@ -69,6 +69,11 @@ void server_shutdown(server_t *self)
     /* Encerra a thread de snapshot. */
     snapshot_stop(&self->snapshot);
 
+    pthread_mutex_lock(&self->wal->mtx);
+    atomic_store(&self->wal->finalize, 1);
+    pthread_cond_signal(&self->wal->not_empty);
+    pthread_mutex_unlock(&self->wal->mtx);
+
     /* Espera a thread de log e a thread de snapshot terminarem. */
     pthread_join(self->log_writer, NULL);
     pthread_join(self->snapshot.thread, NULL);
