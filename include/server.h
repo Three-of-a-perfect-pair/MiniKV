@@ -24,9 +24,6 @@ typedef struct server {
     snapshot_t snapshot;    /* A thread de snapshot.             */
     pthread_t log_writer;   /* A thread de log.                  */
 
-    /* TODO: Adicione aqui os atributos que achar necessários para implementar o
-    comportamento do servidor. Esses atributos deverão ser usados pelas funções
-    do servidor. */
 } server_t;
 
 /*============================================================================*
@@ -78,10 +75,5 @@ extern void server_join_clients(server_t *self);
  * @param self O servidor.
  */
 extern void server_shutdown(server_t *self);
-
-/*============================================================================*
- * ATENÇÃO: Insira aqui funções que você quiser adicionar à interface para    *
- * serem usadas em arquivos que incluem esse header.                          *
- *============================================================================*/
 
 #endif /*__SERVER_H__*/

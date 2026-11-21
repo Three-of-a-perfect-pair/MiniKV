@@ -19,10 +19,6 @@ typedef struct db {
     table_t table; /* Tabela hash com as contas (sem sincronização). */
     wal_t *wal;    /* Referência para o log.                          */
 
-    /* TODO: Adicione aqui os atributos que achar necessários para implementar o
-    comportamento do banco. Esses atributos deverão ser usados pelas funções
-    do banco. */
-
     pthread_mutex_t *mutex;
 
     pthread_cond_t *readers_cv;

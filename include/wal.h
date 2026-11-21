@@ -31,9 +31,6 @@ typedef struct wal {
     long next_lsn;
     atomic_int finalize;
 
-    /* TODO: Adicione aqui os atributos que achar necessários para implementar o
-    comportamento do log. Esses atributos deverão ser usados pelas funções
-    do log. */
 } wal_t;
 
 /*============================================================================*
@@ -85,10 +82,5 @@ extern void wal_wait_durable(wal_t *self, long lsn);
  * @param arg O argumento de entrada da thread, que deverá ser um wal_t.
  */
 extern void *wal_writer_run(void *arg);
-
-/*============================================================================*
- * ATENÇÃO: Insira aqui funções que você quiser adicionar à interface para    *
- * serem usadas em arquivos que incluem esse header.                          *
- *============================================================================*/
 
 #endif /*__WAL_H__*/

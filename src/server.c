@@ -17,14 +17,11 @@ void server_init(server_t *self, db_t *db, wal_t *wal)
     self->n_clients = 0;
     snapshot_init(&self->snapshot, db);
 
-    /* TODO: Adicionar código aqui se necessário! */
-
     plog("[server] Initialized\n");
 }
 
 void server_finalize(server_t *self)
 {
-    /* TODO: Adicionar código aqui se necessário! */
 
     snapshot_finalize(&self->snapshot);
     free(self->clients);
@@ -33,7 +30,6 @@ void server_finalize(server_t *self)
 
 void server_start(server_t *self)
 {
-    /* TODO: Adicionar código aqui se necessário! */
 
     /* Cria a thread de log e a thread de snapshot. */
     pthread_create(&self->log_writer, NULL, wal_writer_run, (void *)self->wal);
@@ -50,7 +46,6 @@ void server_spawn_client(server_t *self)
     /* Inicializa o cliente. */
     client_init(&self->clients[id], self->db, id, (unsigned int)rand());
 
-    /* TODO: Adicionar código aqui se necessário! */
 
     /* Cria a thread cliente. */
     pthread_create(&self->clients[id].thread, NULL, client_run,
@@ -62,9 +57,6 @@ void server_spawn_client(server_t *self)
 
 void server_shutdown(server_t *self)
 {
-    /* TODO: Garantir que todos os registros pendentes foram gravados em disco
-       e encerrar a thread de log, mesmo que ela esteja bloqueada esperando
-       registros. */
 
     /* Encerra a thread de snapshot. */
     snapshot_stop(&self->snapshot);
